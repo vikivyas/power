@@ -3,6 +3,25 @@ configValidationMode: error
 
 provider:
     name: aws
+    cloudFront:
+        cachePolicies:
+            cachePolicy:
+                AllowedMethods:
+                    - GET
+                    - HEAD
+                CachedMethods:
+                    - GET
+                    - HEAD
+                Compress: true
+                DefaultTTL: 86400
+                MaxTTL: 31536000
+                MinTTL: 1
+                TargetOriginId: String
+                ForwardedValues:
+                    QueryString: true
+                    QueryStringCacheKeys:
+                        - v
+                ViewerProtocolPolicy: redirect-to-https
 
 functions:
     http:
@@ -13,4 +32,7 @@ constructs:
         type: server-side-website
         assets:
             "/assets/*": public
+            "/assets-2/*":
+                target: public-cache-policy
+                cachePolicy: cachePolicy
         errorPage: error.html

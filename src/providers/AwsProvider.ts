@@ -64,6 +64,7 @@ export class AwsProvider implements ProviderInterface {
         getLambdaLogicalId: (functionName: string) => string;
         getRestApiLogicalId: () => string;
         getHttpApiLogicalId: () => string;
+        getCloudFrontCachePolicyLogicalId: (policyName: string) => string;
     };
 
     constructor(private readonly serverless: Serverless) {

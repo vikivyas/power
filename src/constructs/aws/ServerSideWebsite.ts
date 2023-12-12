@@ -39,7 +39,22 @@ const SCHEMA = {
         apiGateway: { enum: ["http", "rest"] },
         assets: {
             type: "object",
-            additionalProperties: { type: "string" },
+            additionalProperties: {
+                anyOf: [
+                    {
+                        type: "object",
+                        properties: {
+                            target: { type: "string" },
+                            cachePolicy: { type: "string" },
+                        },
+                        required: ["target", "cachePolicy"],
+                        additionalProperties: false,
+                    },
+                    {
+                        type: "string",
+                    },
+                ],
+            },
             propertyNames: {
                 pattern: "^/.*$",
             },
@@ -243,12 +258,12 @@ export class ServerSideWebsite extends AwsConstruct {
         }
 
         let invalidate = false;
-        for (const [pattern, filePath] of Object.entries(this.getAssetPatterns())) {
+        for (const [pattern, target] of Object.entries(this.getAssetPatterns())) {
+            const filePath = typeof target === "string" ? target : target.target;
             // Ignore external buckets
             if (filePath.startsWith("s3://")) {
                 continue;
             }
-
             if (!fs.existsSync(filePath)) {
                 throw new ServerlessError(
                     `Error in 'constructs.${this.id}': the file or directory '${filePath}' does not exist`,
@@ -357,10 +372,9 @@ export class ServerSideWebsite extends AwsConstruct {
 
     private createCacheBehaviors(bucket: Bucket): Record<string, BehaviorOptions> {
         const behaviors: Record<string, BehaviorOptions> = {};
-        const patterns = this.getAssetPatterns();
         const customOrigins: Record<string, IBucket> = {};
 
-        for (const pattern in patterns) {
+        for (const [pattern, target] of Object.entries(this.getAssetPatterns())) {
             if (pattern === "/" || pattern === "/*") {
                 throw new ServerlessError(
                     `Invalid key in 'constructs.${this.id}.assets': '/' and '/*' cannot be routed to assets because the root URL already serves the backend application running in Lambda. You must use a sub-path instead, for example '/assets/*'.`,
@@ -368,9 +382,10 @@ export class ServerSideWebsite extends AwsConstruct {
                 );
             }
 
+            const filePath = typeof target === "string" ? target : target.target;
             let originBucket = new S3Origin(bucket);
-            if (patterns[pattern].startsWith("s3://")) {
-                let existingBucketName = patterns[pattern].substring(5);
+            if (filePath.startsWith("s3://")) {
+                let existingBucketName = filePath.substring(5);
                 const originProperties = {
                     originPath: "/",
                 };
@@ -392,13 +407,22 @@ export class ServerSideWebsite extends AwsConstruct {
                 originBucket = new S3Origin(existingBucket, originProperties);
             }
 
+            const cachePolicy =
+                typeof target === "string"
+                    ? CachePolicy.CACHING_OPTIMIZED
+                    : {
+                          cachePolicyId: Fn.ref(
+                              this.provider.naming.getCloudFrontCachePolicyLogicalId(target.cachePolicy)
+                          ),
+                      };
+
             behaviors[pattern] = {
                 // Origins are where CloudFront fetches content
                 origin: originBucket,
                 allowedMethods: AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
                 // Use the "Managed-CachingOptimized" policy
                 // See https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-cache-policies.html#managed-cache-policies-list
-                cachePolicy: CachePolicy.CACHING_OPTIMIZED,
+                cachePolicy: cachePolicy,
                 viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
             };
         }
@@ -459,7 +483,7 @@ export class ServerSideWebsite extends AwsConstruct {
         ];
     }
 
-    private getAssetPatterns(): Record<string, string> {
+    private getAssetPatterns(): Record<string, string | { target: string; cachePolicy: string }> {
         const assetPatterns = this.configuration.assets ?? {};
         // If a custom error page is provided, we upload it to S3
         if (this.configuration.errorPage !== undefined) {

@@ -24,6 +24,10 @@ describe("server-side website", () => {
                             "/s3-bucket-with-path/*": "s3://some-other-bucket/some-path",
                             "/s3-bucket-repeat/a/*": "s3://some-bucket-repeat",
                             "/s3-bucket-repeat/b/*": "s3://some-bucket-repeat",
+                            "/assets-custom-policy/*": {
+                                target: "public-cache-policy",
+                                cachePolicy: "public-cache-policy",
+                            },
                         },
                     },
                 },
@@ -36,6 +40,7 @@ describe("server-side website", () => {
         const originAccessIdentityLogicalId3 = computeLogicalId("backend", "CDN", "Origin4", "S3Origin");
         const originAccessIdentityLogicalId4 = computeLogicalId("backend", "CDN", "Origin5", "S3Origin");
         const originAccessIdentityLogicalId5 = computeLogicalId("backend", "CDN", "Origin6", "S3Origin");
+        const customPolicyOriginAccessIdentityLogicalId = computeLogicalId("backend", "CDN", "Origin3", "S3Origin");
         const cfDistributionLogicalId = computeLogicalId("backend", "CDN");
         const cfOriginId1 = computeLogicalId("backend", "CDN", "Origin1");
         const cfOriginId2 = computeLogicalId("backend", "CDN", "Origin2");
@@ -43,6 +48,7 @@ describe("server-side website", () => {
         const cfOriginId4 = computeLogicalId("backend", "CDN", "Origin4");
         const cfOriginId5 = computeLogicalId("backend", "CDN", "Origin5");
         const cfOriginId6 = computeLogicalId("backend", "CDN", "Origin6");
+        const OriginCustom = computeLogicalId("backend", "CDN", "OriginCustom");
         const requestFunction = computeLogicalId("backend", "RequestFunction");
         expect(Object.keys(cfTemplate.Resources)).toStrictEqual([
             "ServerlessDeploymentBucket",
@@ -55,6 +61,7 @@ describe("server-side website", () => {
             originAccessIdentityLogicalId3,
             originAccessIdentityLogicalId4,
             originAccessIdentityLogicalId5,
+            customPolicyOriginAccessIdentityLogicalId,
             cfDistributionLogicalId,
         ]);
         expect(cfTemplate.Resources[bucketLogicalId]).toMatchObject({
@@ -154,6 +161,13 @@ describe("server-side website", () => {
                             TargetOriginId: cfOriginId6,
                             ViewerProtocolPolicy: "redirect-to-https",
                         },
+                        {
+                            CachePolicyId: { "Fn::Ref": "assets-custom-policy" },
+                            Compress: true,
+                            PathPattern: "/assets/*",
+                            TargetOriginId: OriginCustom,
+                            ViewerProtocolPolicy: "redirect-to-https",
+                        },
                     ],
                     Enabled: true,
                     HttpVersion: "http2and3",
@@ -249,6 +263,21 @@ describe("server-side website", () => {
                                     "Fn::Join": [
                                         "",
                                         ["origin-access-identity/cloudfront/", { Ref: originAccessIdentityLogicalId5 }],
+                                    ],
+                                },
+                            },
+                        },
+                        {
+                            DomainName: { "Fn::GetAtt": [bucketLogicalId, "RegionalDomainName"] },
+                            Id: cfOriginId3,
+                            S3OriginConfig: {
+                                OriginAccessIdentity: {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "origin-access-identity/cloudfront/",
+                                            { Ref: customPolicyOriginAccessIdentityLogicalId },
+                                        ],
                                     ],
                                 },
                             },
