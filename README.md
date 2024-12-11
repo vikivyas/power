@@ -161,7 +161,7 @@ TypeScript users can use `serverless.ts` instead of `serverless.yml`. Lift provi
 
 ## Lift is built and maintained with love ❤️ by
 
-<a href="https://www.theodo.fr/" title="Theodo"><img src="docs/img/theodo.png" width="130"></a><a href="https://www.serverless.com/" title="Serverless"><img src="docs/img/serverless-logo.png" width="220"></a> <a href="https://github.com/aran112000" title="aran112000"><img src="docs/img/aran112000.png" width="130"></a><a href="https://github.com/vikivyas" title="vikivyas"><img src="docs/img/vikivyas.png" width="220"></a>
+<a href="https://www.theodo.fr/" title="Theodo"><img src="docs/img/theodo.png" width="130"></a><a href="https://www.serverless.com/" title="Serverless"><img src="docs/img/serverless-logo.png" width="220"></a> <a href="https://github.com/aran112000" title="aran112000"><img src="docs/img/aran112000.png" width="130"></a><a href="https://github.com/vikivyas" title="vikivyas"><img src="docs/img/vikivyas.png" width="130"></a>
 
 ---
 ## Special thanks to contributors:  
